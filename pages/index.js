@@ -1,227 +1,472 @@
-import { useState } from 'react';
-export default function ChessBoard() {
-// Define initial board setup
-const initialBoard = [
-  ["r", "n", "b", "q", "k", "b", "n", "r"],
-  ["p", "p", "p", "p", "p", "p", "p", "p"],
-  [" ", " ", " ", " ", " ", " ", " ", " "],
-  [" ", " ", " ", " ", " ", " ", " ", " "],
-  [" ", " ", " ", " ", " ", " ", " ", " "],
-  [" ", " ", " ", " ", " ", " ", " ", " "],
-  ["P", "P", "P", "P", "P", "P", "P", "P"],
-  ["R", "N", "B", "Q", "K", "B", "N", "R"]
-];
+import { useState } from "react";
 
-// Piece movement definitions
-const pieceMovements = {
-  p: { moves: [[0, 1]], captureMoves: [[-1, 1], [1, 1]] }, // Black pawn
-  P: { moves: [[0, -1]], captureMoves: [[-1, -1], [1, -1]] }, // White pawn
-  r: { moves: "rook" }, R: { moves: "rook" },
-  n: { moves: [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]] },
-  N: { moves: [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]] },
-  b: { moves: "bishop" }, B: { moves: "bishop" },
-  q: { moves: "rookAndBishop" }, Q: { moves: "rookAndBishop" },
-  k: { moves: [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]] },
-  K: { moves: [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]] }
-};
+export default function ShogiBoard() {
+  // Define initial board setup for Shogi
+  const initialBoard = [
+    ["l", "n", "s", "g", "k", "g", "s", "n", "l"],
+    [" ", "r", " ", " ", " ", " ", " ", "b", " "],
+    ["p", "p", "p", "p", "p", "p", "p", "p", "p"],
+    [" ", " ", " ", " ", " ", " ", " ", " ", " "],
+    [" ", " ", " ", " ", " ", " ", " ", " ", " "],
+    [" ", " ", " ", " ", " ", " ", " ", " ", " "],
+    ["P", "P", "P", "P", "P", "P", "P", "P", "P"],
+    [" ", "B", " ", " ", " ", " ", " ", "R", " "],
+    ["L", "N", "S", "G", "K", "G", "S", "N", "L"],
+  ];
 
-// Utility functions
-function isOpponentPiece(piece, selectedPiece) {
-  return (piece.toLowerCase() !== selectedPiece.toLowerCase()) && 
-         (isWhitePiece(piece) !== isWhitePiece(selectedPiece));
-}
+  // Shogi piece movement definitions
+  const pieceMovements = {
+    p: {
+      moves: [[1, 0]], // Pawn can only move forward one square
+      promotions: "g",
+    }, // Black pawn
+    P: {
+      moves: [[0, -1]], // Pawn can only move forward one square
+      promotions: "G",
+    }, // White pawn
+    l: {
+      moves: "forward", // Lance can move any number of squares forward
+      promotions: "g",
+    },
+    L: {
+      moves: "forward",
+      promotions: "G",
+    },
+    n: {
+      moves: [
+        [1, 2], // Knight's "L" shaped movement, only forward
+        [-1, 2],
+      ],
+      promotions: "g",
+    },
+    N: {
+      moves: [
+        [1, 2],
+        [-1, 2],
+      ],
+      promotions: "G",
+    },
+    s: {
+      moves: [
+        [1], // Silver General's movement
+        [-1, 1],
+        [1, 1],
+        [-1, -1],
+        [1, -1],
+      ],
+      promotions: "g",
+    },
+    S: {
+      moves: [
+        [0, -1],
+        [-1, -1],
+        [1, -1],
+        [-1, 1],
+        [1, 1],
+      ],
+      promotions: "G",
+    },
+    g: {
+      moves: [
+        [1], // Gold General's movement
+        [1, 1],
+        [1],
+        [1, -1],
+        [0, -1],
+        [-1, 0],
+      ],
+    }, // Gold general
+    G: {
+      moves: [
+        [0, -1],
+        [1, -1],
+        [1],
+        [1, 1],
+        [1],
+        [-1, 0],
+      ],
+    },
+    b: { moves: "diagonal", promotions: "h" }, // Bishop moves diagonally
+    B: { moves: "diagonal", promotions: "H" },
+    r: { moves: "orthogonal", promotions: "d" }, // Rook moves orthogonally
+    R: { moves: "orthogonal", promotions: "D" },
+    k: {
+      moves: [
+        [1], // King can move one square in any direction
+        [1, 1],
+        [1],
+        [1, -1],
+        [0, -1],
+        [-1, -1],
+        [-1, 0],
+        [-1, 1],
+      ],
+    },
+    K: {
+      moves: [
+        [0, -1],
+        [1, -1],
+        [1],
+        [1, 1],
+        [1],
+        [-1, 1],
+        [-1, 0],
+        [-1, -1],
+      ],
+    },
+    h: { moves: "diagonalKing" }, // Promoted Bishop (Horse)
+    H: { moves: "diagonalKing" },
+    d: { moves: "orthogonalKing" }, // Promoted Rook (Dragon)
+    D: { moves: "orthogonalKing" },
+  };
 
-function isWhitePiece(piece) {
-  return piece === piece.toUpperCase();
-}
+  const [board, setBoard] = useState(initialBoard);
+  const [highlightedSquares, setHighlightedSquares] = useState([]);
+  const [captureMoves, setCaptureMoves] = useState([]);
+  const [selectedPiece, setSelectedPiece] = useState('');
+  const [turn, setTurn] = useState("black");
+  const [capturedPieces, setCapturedPieces] = useState({
+    black: [],
+    white: [],
+  });
 
-// Function to get possible moves for a piece
-function getPossibleMoves(board, piece, fromX, fromY) {
-  const moves = [];
-  const isWhite = isWhitePiece(piece);
-  const direction = isWhite ? -1 : 1; // White moves up (negative direction), Black moves down (positive direction)
+  function isOpponentPiece(piece, selectedPiece) {
+    return (
+      piece?.toLowerCase() !== selectedPiece?.toLowerCase() &&
+      isWhitePiece(piece) !== isWhitePiece(selectedPiece)
+    );
+  }
 
-  if (piece.toLowerCase() === "p") {
-    // Pawn forward movement
-    if (board[fromY + direction]?.[fromX] === " ") {
-      moves?.push([fromX, fromY + direction]);
-      // Allow double forward move if pawn is in starting position
-      if ((isWhite && fromY === 6) || (!isWhite && fromY === 1)) {
-        if (board[fromY + 2 * direction][fromX] === " ") {
-          moves?.push([fromX, fromY + 2 * direction]);
-        }
-      }
-    }
+  function isWhitePiece(piece) {
+    return piece === piece?.toUpperCase();
+  }
 
-    // Pawn captures diagonally
-    const captureMoves = pieceMovements[piece]?.captureMoves;
-    captureMoves?.forEach(([dx, dy]) => {
-      const newX = fromX + dx;
-      const newY = fromY + dy * direction;
-      if (
-        newX >= 0 && newX < 8 && newY >= 0 && newY < 8 &&
-        board[newY][newX] !== " " &&
-        (isOpponentPiece(board[newY][newX], piece) || board[newY][newX].toLowerCase() === "p")
-      ) {
-        moves?.push([newX, newY]);
-      }
-    });
+  function getPossibleMoves(board, piece, fromX, fromY, isDrop = false) {
+    const moves = [];
+    const isWhite = isWhitePiece(piece);
+    const direction = isWhite ? -1 : 1; // White moves up, Black moves down
 
-    // Removed the condition that allows the pawn to move forward one space if there is an opponent's piece diagonally in front of it
-  } else {
-    // Handle other pieces' moves
     const movement = pieceMovements[piece]?.moves;
-    if (movement === "rook") {
-      moves?.push(...getLineMoves(board, piece, fromX, fromY, true));
-    } else if (movement === "bishop") {
-      moves?.push(...getLineMoves(board, piece, fromX, fromY, false));
-    } else if (movement === "rookAndBishop") {
-      moves?.push(...getLineMoves(board, piece, fromX, fromY, true));
-      moves?.push(...getLineMoves(board, piece, fromX, fromY, false));
+
+    if (movement === "forward") {
+      moves?.push(...getLineMoves(board, piece, fromX, fromY, 0, direction)); // Forward movement for Lance
+    } else if (movement === "diagonal") {
+      moves?.push(
+        ...getLineMoves(board, piece, fromX, fromY, 1, direction) // Diagonal movement for Bishop
+      );
+      moves?.push(
+        ...getLineMoves(board, piece, fromX, fromY, -1, direction)
+      );
+    } else if (movement === "orthogonal") {
+      moves?.push(
+        ...getLineMoves(board, piece, fromX, fromY, 0, 1) // Orthogonal movement for Rook
+      );
+      moves?.push(...getLineMoves(board, piece, fromX, fromY, 0, -1));
+      moves?.push(...getLineMoves(board, piece, fromX, fromY, 1, 0));
+      moves?.push(...getLineMoves(board, piece, fromX, fromY, -1, 0));
+    } else if (movement === "diagonalKing") {
+      moves?.push(...getKingMoves(board, piece, fromX, fromY, true));
+    } else if (movement === "orthogonalKing") {
+      moves?.push(...getKingMoves(board, piece, fromX, fromY, false));
     } else {
       movement?.forEach(([dx, dy]) => {
         const x = fromX + dx;
         const y = fromY + dy;
-        if (x >= 0 && x < 8 && y >= 0 && y < 8 && (board[y][x] === " " || isOpponentPiece(board[y][x], piece))) {
+
+        if (
+          x >= 0 &&
+          x < 9 && // Shogi board is 9x9
+          y >= 0 &&
+          y < 9 &&
+          (board[y][x] === " " || isOpponentPiece(board[y][x], piece)) &&
+          (!isDrop || isValidDrop(piece, x, y, isWhite))
+        ) {
           moves?.push([x, y]);
         }
       });
     }
-  }
-  return moves;
-}
-function getLineMoves(board, piece, fromX, fromY, isDiagonal) {
-  const moves = [];
-  const directions = isDiagonal 
-    ? [[1, 1], [1, -1], [-1, 1], [-1, -1]]
-    : [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
-  directions.forEach(([dx, dy]) => {
+    return moves;
+  }
+
+  function isValidDrop(piece, x, y, isWhite) {
+    if (piece.toLowerCase() === "p") {
+      // Pawns cannot be dropped on the last row
+      if (isWhite && y === 0) {
+        return false;
+      } else if (!isWhite && y === 8) {
+        return false;
+      }
+      // Pawns cannot be dropped in a column with another unpromoted pawn of the same player
+      for (let i = 0; i < 9; i++) {
+        if (
+          (isWhite && board[i][x] === "P") ||
+          (!isWhite && board[i][x] === "p")
+        ) {
+          return false;
+        }
+      }
+    } else if (piece?.toLowerCase() === "l" || piece?.toLowerCase() === "n") {
+      // Lances and Knights cannot be dropped on the last row
+      if (isWhite && y === 0) {
+        return false;
+      } else if (!isWhite && y === 8) {
+        return false;
+      }
+      if (piece?.toLowerCase() === "n") {
+        // Knights cannot be dropped on the second to last row
+        if (isWhite && y === 1) {
+          return false;
+        } else if (!isWhite && y === 7) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  function getLineMoves(board, piece, fromX, fromY, dx, dy) {
+    const moves = [];
     let x = fromX + dx;
     let y = fromY + dy;
-    while (x >= 0 && x < 8 && y >= 0 && y < 8) {
+
+    while (x >= 0 && x < 9 && y >= 0 && y < 9) {
       if (board[y][x] === " ") {
         moves?.push([x, y]);
       } else if (isOpponentPiece(board[y][x], piece)) {
         moves?.push([x, y]);
         break;
-      } else break;
+      } else {
+        break;
+      }
       x += dx;
       y += dy;
     }
-  });
-  return moves;
-}
-
-function leavesKingInCheck(board, from, to, piece) {
-  const newBoard = board.map(row => [...row]);
-  const [fromX, fromY] = from;
-  const [toX, toY] = to;
-
-  newBoard[toY][toX] = piece;
-  newBoard[fromY][fromX] = " ";
-
-  const kingPosition = findKingPosition(newBoard, isWhitePiece(piece) ? "K" : "k");
-  return isSquareUnderAttack(newBoard, kingPosition, isWhitePiece(piece) ? "black" : "white");
-}
-
-function findKingPosition(board, king) {
-  for (let y = 0; y < 8; y++) {
-    for (let x = 0; x < 8; x++) {
-      if (board[y][x] === king) {
-        return [x, y];
-      }
-    }
+    return moves;
   }
-}
 
-function isSquareUnderAttack(board, [x, y], opponentColor) {
-  for (let j = 0; j < 8; j++) {
-    for (let i = 0; i < 8; i++) {
-      const piece = board[j][i];
-      if (piece && ((opponentColor === "white" && isWhitePiece(piece)) || 
-                    (opponentColor === "black" && !isWhitePiece(piece)))) {
-        if (getPossibleMoves(board, piece, i, j).some(([moveX, moveY]) => moveX === x && moveY === y)) {
-          return true;
-        }
+  function getKingMoves(board, piece, fromX, fromY, isDiagonal) {
+    const moves = [];
+    const directions = isDiagonal
+      ? [
+          [1, 1],
+          [1, -1],
+          [-1, 1],
+          [-1, -1],
+        ]
+      : [
+          [1],
+          [-1, 0],
+          [1],
+          [0, -1],
+        ];
+
+    directions?.forEach(([dx, dy]) => {
+      const x = fromX + dx;
+      const y = fromY + dy;
+      if (
+        x >= 0 &&
+        x < 9 &&
+        y >= 0 &&
+        y < 9 &&
+        (board[y][x] === " " || isOpponentPiece(board[y][x], piece))
+      ) {
+        moves?.push([x, y]);
       }
-    }
+    });
+
+    return moves;
   }
-  return false;
-}
-
-
-// Main component
-
-  const [board, setBoard] = useState(initialBoard);
-  const [highlightedSquares, setHighlightedSquares] = useState([]);
-  const [captureMoves, setCaptureMoves] = useState([]);
-  const [selectedPiece, setSelectedPiece] = useState(null);
-  const [turn, setTurn] = useState("white");
 
   function handleSquareClick(x, y) {
     const piece = board[y][x];
-    
     if (selectedPiece) {
+      // If a piece is selected, attempt to move it
       const [fromX, fromY] = selectedPiece?.position;
       if (highlightedSquares?.find(([hx, hy]) => hx === x && hy === y)) {
-        const newBoard = board?.map(row => [...row]);
-        if (selectedPiece?.piece.toLowerCase() === "p" && captureMoves?.find((cx, cy) => cx === x && cy === y)) {
-          newBoard[y][x] = selectedPiece?.piece;
-          newBoard[fromY][fromX] = " ";
-        } else {
-          newBoard[y][x] = selectedPiece?.piece;
-          newBoard[fromY][fromX] = " ";
-        }
-
-        if (!leavesKingInCheck(newBoard, [fromX, fromY], [x, y], selectedPiece?.piece)) {
-          setBoard(newBoard);
-          setSelectedPiece(null);
-          setHighlightedSquares([]);
-          setTurn(turn === "white" ? "black" : "white");
-        } else {
-          alert("This move would leave your king in check.");
-        }
+        // If the clicked square is a valid move, move the piece
+        movePiece(fromX, fromY, x, y);
       } else {
+        // If the clicked square is not a valid move, deselect the piece
         setSelectedPiece(null);
         setHighlightedSquares([]);
+        setCaptureMoves([]);
       }
-    } else {
-      if ((turn === "white" && piece === piece?.toUpperCase()) || (turn === "black" && piece === piece?.toLowerCase())) {
-        setSelectedPiece({ position: [x, y], piece });
-        const possibleMoves = getPossibleMoves(board, piece, x, y);
-        setHighlightedSquares(possibleMoves);
-        if (piece.toLowerCase() === "p") {
-          setCaptureMoves(possibleMoves.find(([px, py]) => isOpponentPiece(board[py][px], piece)));
-        } else {
-          setCaptureMoves([]);
-        }
-      }
+    } else if (piece && isPlayerPiece(piece)) {
+      // If no piece is selected and the clicked square contains a piece of the current player, select it
+      setSelectedPiece({ position: [x, y], piece });
+      setHighlightedSquares(getPossibleMoves(board, piece, x, y));
+    }
+  }
+
+  function isPlayerPiece(piece) {
+    // Determine if the piece belongs to the current player
+    return (
+      (turn === "white" && isWhitePiece(piece)) ||
+      (turn === "black" && !isWhitePiece(piece))
+    );
+  }
+
+  function movePiece(fromX, fromY, toX, toY) {
+    // Create a new board with the piece moved
+    const newBoard = board?.map((row) => [...row]);
+    let piece = newBoard[fromY][fromX];
+
+    // Capture the opponent's piece if present
+    if (newBoard[toY][toX] !== " ") {
+      capturePiece(newBoard[toY][toX]);
+    }
+
+    // Move the piece to the new location
+    newBoard[toY][toX] = piece;
+    newBoard[fromY][fromX] = " ";
+
+    // Promote the piece if in the promotion zone and eligible
+    if (shouldPromote(piece, toY)) {
+      piece = promotePiece(piece);
+      newBoard[toY][toX] = piece;
+    }
+
+    // Update the board state
+    setBoard(newBoard);
+    setSelectedPiece(null);
+    setHighlightedSquares([]);
+    setTurn(turn === "white" ? "black" : "white");
+  }
+
+  function capturePiece(piece) {
+    // Add the captured piece to the appropriate player's captured pieces
+    const player = isWhitePiece(piece) ? "black" : "white";
+    setCapturedPieces((prev) => ({
+      ...prev,
+      [player]: [...prev[player], piece?.toLowerCase()],
+    }));
+  }
+
+  function shouldPromote(piece, toY) {
+    // Determine if the piece should be promoted based on its type and location
+    const isWhite = isWhitePiece(piece);
+    const promotionZone = isWhite ? [1, 2] : [3-5];
+    const mustPromote =
+      (piece?.toLowerCase() === "p" && (isWhite ? toY === 0 : toY === 8)) ||
+      (piece?.toLowerCase() === "l" && (isWhite ? toY === 0 : toY === 8)) ||
+      (piece?.toLowerCase() === "n" && (isWhite ? toY <= 1 : toY >= 7));
+
+    return mustPromote || promotionZone?.includes(toY);
+  }
+
+  function promotePiece(piece) {
+    const promotion = pieceMovements[piece]?.promotions;
+    return isWhitePiece(piece) ? promotion?.toUpperCase() : promotion;
+  }
+
+  function handleDrop(piece, x, y) {
+    const player = turn;
+    const isWhite = player === "white";
+    if (isValidDrop(piece, x, y, isWhite)) {
+      const newBoard = board?.map((row) => [...row]);
+      newBoard[y][x] = isWhite ? piece?.toUpperCase() : piece?.toLowerCase();
+      setBoard(newBoard);
+      setCapturedPieces((prev) => ({
+        ...prev,
+        [player]: prev[player]?.filter((p) => p !== piece?.toLowerCase()),
+      }));
+      setTurn(player === "white" ? "black" : "white");
     }
   }
 
   return (
     <div>
-      {board.map((row, y) => (
-        <div key={y} style={{ display: 'flex' }}>
-          {row.map((square, x) => (
-            <div
-              key={x}
-              onClick={() => handleSquareClick(x, y)}
-              style={{
-                width: '50px',
-                height: '50px',
-                backgroundColor: highlightedSquares?.some(([hx, hy]) => hx === x && hy === y) ? 'yellow' : (x + y) % 2 === 0 ? 'white' : 'gray',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        {" "}
+        {/* Captured pieces display */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-around",
+            width: "450px",
+            marginBottom: "10px",
+          }}
+        >
+          <div>
+            <h3>Black Captured Pieces</h3>
+            <ul>
+              {capturedPieces?.black.map((piece) => (
+                <li key={piece}>{piece}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3>White Captured Pieces</h3>
+            <ul>
+              {capturedPieces?.white.map((piece) => (
+                <li key={piece}>{piece}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        {" "}
+        {/* Shogi board display */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(9, 50px)",
+            border: "1px solid black",
+          }}
+        >
+          {board?.map((row, y) =>
+            row?.map((square, x) => (
+              <div
+                key={x}
+                onClick={() => handleSquareClick(x, y)}
+                style={{
+                  width: "50px",
+                  height: "50px",
+                  backgroundColor:
+                    highlightedSquares?.some(
+                      ([hx, hy]) => hx === x && hy === y
+                    ) || captureMoves?.find((cx, cy) => cx === x && cy === y)
+                      ? "yellow"
+                      : (x + y) % 2 === 0
+                      ? "white"
+                      : "gray",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid lightgray",
+                }}
+              >
+                {square}
+              </div>
+            ))
+          )}
+        </div>
+        {/* Captured pieces droppable area */}
+        <div>
+          <h3>{turn?.toUpperCase()} Players Turn</h3>
+          {capturedPieces[turn]?.map((piece) => (
+            <button
+              key={piece}
+              onClick={handleDrop(() => {
+                setSelectedPiece({ piece: piece });
+                setHighlightedSquares([]);
+                setCaptureMoves(
+                  getPossibleMoves(board, piece, null, null, true)
+                );
+              }, [])}
             >
-              {square}
-            </div>
+              {piece}
+            </button>
           ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
